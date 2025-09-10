@@ -20,6 +20,8 @@ async def chat_with_doc(
     """
     user_id = current_user.get("sub") # 'sub' is the standard JWT claim for subject (user ID)
     logger.info(f"Received chat request from user {user_id} for doc {request.document_id}")
+    logger.info(f"Document ID type: {type(request.document_id)}, value: '{request.document_id}'")
+    logger.info(f"Question: '{request.question}'")
 
     try:
         # Get the retriever for the specific user and document

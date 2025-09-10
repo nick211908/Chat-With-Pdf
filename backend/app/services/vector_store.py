@@ -59,18 +59,88 @@ class MongoVectorStore:
             logger.error(f"Error adding documents to vector store: {e}")
             raise
 
-    def get_retriever(self, user_id: str, document_id: str):
+    def get_retriever(self, user_id: str, document_id: str, k: int = 5):
         """
-        Returns a simplified retriever for a specific user and document.
+        Returns a retriever that performs vector similarity search for a specific user and document.
+        
+        Args:
+            user_id: The user ID to filter documents
+            document_id: The document ID to filter documents  
+            k: Number of most similar documents to retrieve (default: 5)
         """
-        def simple_retriever(query: str):
-            # For a production app, you would perform a vector similarity search here.
-            results = self.collection.find({
-                "metadata.user_id": user_id,
-                "metadata.document_id": document_id
-            })
-            return [Document(page_content=r['text'], metadata=r['metadata']) for r in results]
-        return simple_retriever
+        def vector_similarity_retriever(query: str):
+            try:
+                # Add detailed logging for debugging
+                logger.info(f"Searching for documents with user_id='{user_id}' and document_id='{document_id}'")
+                
+                # First, let's see what documents exist for this user
+                all_user_docs = list(self.collection.find({"metadata.user_id": user_id}))
+                logger.info(f"Found {len(all_user_docs)} total documents for user {user_id}")
+                
+                if all_user_docs:
+                    # Log the document IDs we have for this user
+                    doc_ids = [doc.get('metadata', {}).get('document_id', 'MISSING') for doc in all_user_docs]
+                    logger.info(f"Available document IDs for user {user_id}: {doc_ids}")
+                
+                # Embed the query using the same model used for document embeddings
+                query_embedding = self.embedding_model.embed_query(query)
+                
+                # Retrieve all documents for the user and document_id
+                results = list(self.collection.find({
+                    "metadata.user_id": user_id,
+                    "metadata.document_id": document_id
+                }))
+                
+                if not results:
+                    logger.warning(f"No documents found for user {user_id} and document {document_id}")
+                    logger.warning(f"Query was looking for exact match on document_id: '{document_id}' (type: {type(document_id)})")
+                    return []
+                
+                # Calculate similarity scores in Python (more reliable than MongoDB aggregation)
+                import numpy as np
+                
+                scored_docs = []
+                for result in results:
+                    doc_embedding = result['embedding']
+                    
+                    # Calculate cosine similarity (dot product for normalized vectors)
+                    similarity_score = np.dot(query_embedding, doc_embedding)
+                    
+                    # Add similarity score to metadata
+                    metadata = result['metadata'].copy()
+                    metadata['similarity_score'] = float(similarity_score)
+                    
+                    scored_docs.append({
+                        'document': Document(
+                            page_content=result['text'], 
+                            metadata=metadata
+                        ),
+                        'score': similarity_score
+                    })
+                
+                # Sort by similarity score (descending) and take top k
+                scored_docs.sort(key=lambda x: x['score'], reverse=True)
+                top_docs = [item['document'] for item in scored_docs[:k]]
+                
+                logger.info(f"Retrieved {len(top_docs)} similar documents for query: '{query[:50]}...'")
+                if top_docs:
+                    logger.debug(f"Top similarity score: {top_docs[0].metadata.get('similarity_score', 'N/A')}")
+                
+                return top_docs
+                
+            except Exception as e:
+                logger.error(f"Error in vector similarity search: {e}")
+                # Fallback to simple text search if vector search fails
+                logger.warning("Falling back to simple text search")
+                results = self.collection.find({
+                    "metadata.user_id": user_id,
+                    "metadata.document_id": document_id,
+                    "text": {"$regex": query, "$options": "i"}  # Case-insensitive text search
+                }).limit(k)
+                
+                return [Document(page_content=r['text'], metadata=r['metadata']) for r in results]
+        
+        return vector_similarity_retriever
 
 vector_store = MongoVectorStore()
 

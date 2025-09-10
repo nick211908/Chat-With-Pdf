@@ -1,4 +1,9 @@
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+import os
+
+# Explicitly load the .env file
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
 
 class Settings(BaseSettings):
     """
@@ -23,4 +28,3 @@ class Settings(BaseSettings):
     }
 
 settings = Settings()
-

@@ -28,10 +28,12 @@ async def upload_pdf(
     try:
         # --- FIX: GENERATE A UNIQUE DOCUMENT ID ---
         document_id = str(uuid.uuid4())
+        logger.info(f"Generated document_id: '{document_id}' (type: {type(document_id)})")
         # ----------------------------------------
 
         # Process the PDF to get document chunks
         documents = pdf_loader.load_and_split_documents(file=file)
+        logger.info(f"Processed {len(documents)} document chunks")
 
         # Add the processed documents to the vector store
         vector_store.add_documents(
@@ -41,11 +43,14 @@ async def upload_pdf(
         )
 
         logger.success(f"Successfully processed and stored document {document_id} for user {user_id}")
-        return UploadResponse(
+        
+        response = UploadResponse(
             message="File uploaded and processed successfully.",
             filename=file.filename,  # Include the original filename
             document_id=document_id
         )
+        logger.info(f"Returning response with document_id: '{response.document_id}'")
+        return response
     except Exception as e:
         logger.error(f"Error during file upload for user {user_id}: {e}")
         # Propagate the specific error message for better debugging

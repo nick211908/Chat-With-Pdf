@@ -1,113 +1,99 @@
-import { CONFIG, ENDPOINTS } from './config.js';
-import { debugLog } from './utils.js';
+const API_BASE_URL = 'http://127.0.0.1:8000';
+let getSession; // This will be our function to get the Supabase session
 
-let supabaseClient = null;
-
-export function setSupabaseClient(client) {
-    supabaseClient = client;
+// This function is called by chatUI.js once Supabase is ready.
+export function initializeApi(sessionProvider) {
+    getSession = sessionProvider;
+    // Return the public API methods that the rest of the app can use.
+    return {
+        uploadPDF,
+        postChatMessage
+    };
 }
 
-async function makeAuthenticatedRequest(url, options = {}) {
-    try {
-        if (!supabaseClient) {
-            throw new Error('Supabase client not initialized');
-        }
-
-        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-        
-        if (sessionError) {
-            debugLog('Session error', sessionError);
-            throw new Error('Authentication session error');
-        }
-
-        if (!sessionData.session?.access_token) {
-            debugLog('No access token found');
-            throw new Error('No authentication token found. Please log in again.');
-        }
-
-        const token = sessionData.session.access_token;
-        debugLog(`Making request to: ${url}`);
-
-        const response = await fetch(url, {
-            ...options,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                ...options.headers
-            },
-            signal: AbortSignal.timeout(30000) // 30 second timeout
-        });
-
-        debugLog(`Response status: ${response.status}`);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage;
-            
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.detail || errorData.message || `HTTP ${response.status}`;
-            } catch {
-                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-            }
-            
-            debugLog(`API Error: ${errorMessage}`);
-            throw new Error(errorMessage);
-        }
-
-        const result = await response.json();
-        debugLog('API Response', result);
-        return result;
-
-    } catch (error) {
-        if (error.name === 'TimeoutError') {
-            debugLog('Request timeout');
-            throw new Error('Request timed out. Please check your connection and try again.');
-        }
-        debugLog('Request failed', error);
-        throw error;
+async function getAuthToken() {
+    if (!getSession) {
+        throw new Error("API module has not been initialized.");
     }
+    const { data, error } = await getSession();
+    if (error) {
+        console.error("Error getting auth session from Supabase:", error);
+        return null;
+    }
+    return data.session?.access_token;
 }
 
-export async function uploadPDF(file) {
+// A helper to handle fetch responses and parse errors
+async function handleResponse(response) {
+    if (!response.ok) {
+        // Try to parse the error message from the backend for better feedback
+        let errorMessage;
+        try {
+            const errorData = await response.json();
+            // FastAPI validation errors are often nested in errorData.detail
+            if (Array.isArray(errorData.detail)) {
+                 errorMessage = errorData.detail.map(err => `${err.loc.join('.')} - ${err.msg}`).join('; ');
+            } else {
+                 errorMessage = errorData.detail || JSON.stringify(errorData);
+            }
+        } catch (e) {
+            errorMessage = `HTTP error! Status: ${response.status}`;
+        }
+        throw new Error(errorMessage);
+    }
+    return response.json();
+}
+
+
+async function uploadPDF(file) {
+    const token = await getAuthToken();
+    if (!token) {
+        throw new Error('Authentication error: You must be logged in to upload files.');
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 
-    return await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}${ENDPOINTS.UPLOAD}`, {
-        method: 'POST',
-        body: formData
-    });
-}
-
-export async function postChatMessage(documentId, question) {
-    return await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}${ENDPOINTS.CHAT}`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/upload`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-            document_id: documentId,
-            question: question
-        })
+        body: formData,
     });
+
+    const result = await handleResponse(response);
+    console.log('uploadPDF result:', result);
+    console.log('uploadPDF result.document_id:', result.document_id, 'type:', typeof result.document_id);
+    
+    return result;
 }
 
-export async function testBackendConnectivity() {
-    try {
-        debugLog('Testing backend connectivity');
-        const healthCheck = await fetch(`${CONFIG.API_BASE_URL}${ENDPOINTS.HEALTH_CHECK}`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(5000)
-        });
-        
-        if (healthCheck.ok) {
-            debugLog('Backend is reachable');
-            return true;
-        } else {
-            debugLog('Backend health check failed', { status: healthCheck.status });
-            return false;
-        }
-    } catch (error) {
-        debugLog('Backend connectivity test failed', error);
-        return false;
+async function postChatMessage(documentId, question) {
+    console.log('postChatMessage called with:', { documentId, question });
+    console.log('documentId type:', typeof documentId, 'value:', documentId);
+
+    const token = await getAuthToken();
+    if (!token) {
+        throw new Error('Authentication error: You must be logged in to chat.');
     }
+
+    const requestBody = {
+        document_id: documentId,
+        question: question,
+    };
+    
+    console.log('Request body:', requestBody);
+    console.log('Request body JSON:', JSON.stringify(requestBody));
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/chat`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    return handleResponse(response);
 }

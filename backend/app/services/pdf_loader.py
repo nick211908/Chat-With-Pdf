@@ -17,30 +17,30 @@ class PDFLoader:
         logger.info("PDFLoader initialized with PyPDFLoader.")
 
     def load_and_split_documents(self, file: UploadFile):
-        """
-        Loads a PDF from an in-memory file, saves it temporarily, processes it,
-        and then splits the text into manageable chunks.
-        """
-        temp_file_path = None
         try:
+            # Ensure the file is read correctly
             content = file.file.read()
             if not content:
                 raise ValueError("Uploaded file is empty or could not be read.")
-
+    
+            # Save the file temporarily
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                 temp_file.write(content)
                 temp_file_path = temp_file.name
-
+    
+            logger.info(f"Temporarily saved PDF to {temp_file_path}")
+    
+            # Process the file
             loader = PyPDFLoader(temp_file_path)
             documents = loader.load_and_split(text_splitter=self.text_splitter)
-
+    
             logger.success(f"Successfully loaded and split PDF into {len(documents)} chunks.")
             return documents
-
+    
         except Exception as e:
             logger.error(f"Failed to load or split PDF: {e}")
             raise
         finally:
             if temp_file_path and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
-
+                logger.info(f"Cleaned up temporary file: {temp_file_path}")
