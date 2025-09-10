@@ -1,50 +1,47 @@
-import { uploadPDF } from './api.js';
-
-const uploaderForm = document.getElementById('uploader-form');
-const fileInput = document.getElementById('file-input');
-const uploadStatus = document.getElementById('upload-status');
-
-export function initializeUploader(onUploadSuccess) {
-    if (uploaderForm) {
-        uploaderForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleUpload(onUploadSuccess);
+// This module no longer searches for elements, preventing race conditions.
+// It receives all necessary elements and functions from chatUI.js.
+export function initializeUploader(elements, api, onUploadSuccess) {
+    if (elements.uploadForm) {
+        elements.uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); 
+            await handleUpload(elements, api, onUploadSuccess);
         });
+    } else {
+        console.error("Critical Error: Uploader form not found in the DOM.");
     }
 }
 
-async function handleUpload(onUploadSuccess) {
-    console.log("1. Upload button clicked."); // Probe 1: Confirms the event listener is working.
-
-    if (!fileInput.files || fileInput.files.length === 0) {
-        uploadStatus.textContent = 'Please select a file first.';
-        console.error("ERROR: No file selected.");
+async function handleUpload(elements, api, onUploadSuccess) {
+    if (!elements.pdfFileInput.files || elements.pdfFileInput.files.length === 0) {
+        elements.uploadStatus.textContent = 'Please select a PDF file first.';
+        elements.uploadStatus.className = 'status-message error';
         return;
     }
 
-    const file = fileInput.files[0];
-    console.log("2. File selected:", file); // Probe 2: Confirms we have the file object.
-
-    uploadStatus.textContent = `Uploading ${file.name}...`;
-    uploadStatus.classList.remove('error');
-    uploadStatus.classList.add('processing');
+    const file = elements.pdfFileInput.files[0];
+    
+    // Provide immediate, clear user feedback
+    elements.uploadStatus.textContent = `Uploading and processing: ${file.name}...`;
+    elements.uploadStatus.className = 'status-message loading';
+    elements.uploadButton.disabled = true;
 
     try {
-        console.log("3. Preparing to call uploadPDF from api.js..."); // Probe 3: Confirms we are about to make the API call.
-        const result = await uploadPDF(file);
+        const result = await api.uploadPDF(file);
         
-        console.log("SUCCESS: Received response from backend:", result); // Confirms API call was successful.
+        elements.uploadStatus.textContent = 'File processed successfully! You can now ask questions.';
+        elements.uploadStatus.className = 'status-message success';
         
-        uploadStatus.textContent = 'File uploaded successfully! Processing...';
-        onUploadSuccess(result.document_id); // Pass the document ID to the main UI
+        // Callback to the main UI to update the application state
+        onUploadSuccess(elements, result.document_id);
 
     } catch (error) {
-        console.error("ERROR in handleUpload:", error); // Logs the actual error object.
-        uploadStatus.textContent = `Upload failed: ${error.message}`;
-        uploadStatus.classList.add('error');
+        console.error("Upload failed:", error);
+        elements.uploadStatus.textContent = `Upload failed: ${error.message}`;
+        elements.uploadStatus.className = 'status-message error';
     } finally {
-        console.log("Finished handleUpload function.");
-        uploaderForm.reset(); // Clear the file input
+        // Always re-enable the form for the next upload attempt
+        elements.uploadButton.disabled = false;
+        elements.uploadForm.reset(); 
     }
 }
 

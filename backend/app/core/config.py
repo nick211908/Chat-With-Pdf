@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
 
 class Settings(BaseSettings):
     """
@@ -8,14 +7,14 @@ class Settings(BaseSettings):
     # MongoDB
     MONGO_CONNECTION_STRING: str
 
-    # Google Gemini (using the standard environment variable name)
-    GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
+    # Google Gemini (for the Chat LLM)
+    GOOGLE_API_KEY: str
 
     # Supabase Auth
     SUPABASE_URL: str
-    SUPABASE_KEY: str  # This is the service_role key
+    SUPABASE_KEY: str
     SUPABASE_JWT_SECRET: str
-    SUPABASE_ANON_KEY: str # This is the public anon key
+    SUPABASE_ANON_KEY: str
 
     model_config = {
         'env_file': '.env',

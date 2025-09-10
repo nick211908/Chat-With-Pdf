@@ -12,62 +12,67 @@
     <div class="container">
         <!-- Authentication Section -->
         <section id="auth-section">
-            <div class="auth-container">
-                <!-- Login Form -->
-                <div class="auth-form">
-                    <h2>Login</h2>
-                    <form id="login-form">
-                        <!-- THE FIX IS HERE: Added name="email" and name="password" -->
-                        <input type="email" id="login-email" name="email" placeholder="Email" required>
-                        <input type="password" id="login-password" name="password" placeholder="Password" required>
-                        <button type="submit">Login</button>
+            <div id="auth-container">
+                <div class="auth-box">
+                    <h2 class="auth-title">Welcome Back</h2>
+                    <p class="auth-subtitle">Please sign in to continue</p>
+                    <!-- --- CRITICAL FIX: Added method="post" --- -->
+                    <form id="login-form" method="post">
+                        <div class="input-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" name="email" placeholder="you@example.com" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" name="password" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Sign In</button>
                     </form>
-                </div>
-                <!-- Signup Form -->
-                <div class="auth-form">
-                    <h2>Sign Up</h2>
-                    <form id="signup-form">
-                         <!-- THE FIX IS HERE: Added name="email" and name="password" -->
-                        <input type="email" id="signup-email" name="email" placeholder="Email" required>
-                        <input type="password" id="signup-password" name="password" placeholder="Password" required>
-                        <button type="submit">Sign Up</button>
+                    <div class="divider">OR</div>
+                    <!-- --- CRITICAL FIX: Added method="post" --- -->
+                    <form id="signup-form" method="post">
+                        <button type="submit" class="btn btn-secondary">Create a New Account</button>
                     </form>
+                    <div id="auth-message" class="notification"></div>
                 </div>
             </div>
-            <p id="auth-message" class="message system"></p>
         </section>
 
         <!-- Main Application Section (hidden by default) -->
         <section id="main-section" style="display: none;">
-            <header>
-                <h1>Chat with Your PDF</h1>
-                <div>
+            <header class="app-header">
+                <div class="user-info">
                     <span id="user-identifier"></span>
-                    <button id="logout-button">Logout</button>
                 </div>
+                <button id="logout-button" class="btn btn-logout">Logout</button>
             </header>
 
             <!-- PDF Uploader -->
-            <div id="uploader-container" class="card">
+            <div class="card">
                 <h2>1. Upload Your PDF</h2>
-                <form id="upload-form">
-                    <input type="file" id="pdf-file" accept=".pdf" required>
-                    <button type="submit">Upload and Process</button>
+                <!-- --- CRITICAL FIX: Added method="post" --- -->
+                <form id="upload-form" method="post">
+                    <input type="file" id="pdf-file-input" name="file" accept=".pdf" required>
+                    <button type="submit" class="btn btn-primary">Upload and Process</button>
                 </form>
-                <div id="upload-status" class="message"></div>
+                <div id="upload-status" class="status-message"></div>
             </div>
 
             <!-- Chat Interface -->
             <div id="chat-container" class="card">
                 <h2>2. Ask a Question</h2>
                 <div id="chat-window">
-                    <div class="message system">Please upload a document to begin.</div>
+                     <div id="chat-messages">
+                        <div class="message bot-message">
+                            <p>Please upload a document to begin.</p>
+                        </div>
+                    </div>
                 </div>
-                <form id="chat-form">
-                    <input type="text" id="chat-input" placeholder="Ask a question about the document..." required>
-                    <button type="submit">Send</button>
+                 <!-- --- CRITICAL FIX: Added method="post" --- -->
+                <form id="chat-form" method="post">
+                    <input type="text" id="chat-input" placeholder="Ask a question about the document..." required disabled>
+                    <button type="submit" class="btn btn-primary" disabled>Send</button>
                 </form>
-                 <p id="chat-status" class="message system"></p>
             </div>
         </section>
     </div>
