@@ -10,13 +10,19 @@
 </head>
 <body>
     <div class="container">
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debug-panel" style="display: none;">
+            <strong>Debug Info:</strong>
+            <div id="debug-content"></div>
+        </div>
+
         <!-- Authentication Section -->
         <section id="auth-section">
             <div id="auth-container">
                 <div class="auth-box">
                     <h2 class="auth-title">Welcome Back</h2>
                     <p class="auth-subtitle">Please sign in to continue</p>
-                    <!-- --- CRITICAL FIX: Added method="post" --- -->
+                    
                     <form id="login-form" method="post">
                         <div class="input-group">
                             <label for="login-email">Email</label>
@@ -28,29 +34,33 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Sign In</button>
                     </form>
+                    
                     <div class="divider">OR</div>
-                    <!-- --- CRITICAL FIX: Added method="post" --- -->
+                    
                     <form id="signup-form" method="post">
                         <button type="submit" class="btn btn-secondary">Create a New Account</button>
                     </form>
+                    
                     <div id="auth-message" class="notification"></div>
                 </div>
             </div>
         </section>
 
-        <!-- Main Application Section (hidden by default) -->
+        <!-- Main Application Section -->
         <section id="main-section" style="display: none;">
             <header class="app-header">
                 <div class="user-info">
                     <span id="user-identifier"></span>
                 </div>
-                <button id="logout-button" class="btn btn-logout">Logout</button>
+                <div>
+                    <button id="debug-toggle" class="btn btn-secondary" style="width: auto; margin-right: 1rem;">Debug</button>
+                    <button id="logout-button" class="btn btn-logout">Logout</button>
+                </div>
             </header>
 
             <!-- PDF Uploader -->
             <div class="card">
                 <h2>1. Upload Your PDF</h2>
-                <!-- --- CRITICAL FIX: Added method="post" --- -->
                 <form id="upload-form" method="post">
                     <input type="file" id="pdf-file-input" name="file" accept=".pdf" required>
                     <button type="submit" class="btn btn-primary">Upload and Process</button>
@@ -68,7 +78,6 @@
                         </div>
                     </div>
                 </div>
-                 <!-- --- CRITICAL FIX: Added method="post" --- -->
                 <form id="chat-form" method="post">
                     <input type="text" id="chat-input" placeholder="Ask a question about the document..." required disabled>
                     <button type="submit" class="btn btn-primary" disabled>Send</button>
@@ -77,8 +86,7 @@
         </section>
     </div>
 
-    <!-- Main JS Modules -->
-    <script type="module" src="js/chatUI.js"></script>
+    <!-- Load JavaScript modules -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
-

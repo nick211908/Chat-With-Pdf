@@ -1,47 +1,51 @@
-// This module no longer searches for elements, preventing race conditions.
-// It receives all necessary elements and functions from chatUI.js.
-export function initializeUploader(elements, api, onUploadSuccess) {
-    if (elements.uploadForm) {
-        elements.uploadForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); 
-            await handleUpload(elements, api, onUploadSuccess);
-        });
-    } else {
-        console.error("Critical Error: Uploader form not found in the DOM.");
+import { uploadPDF } from './api.js';
+import { debugLog, showStatus } from './utils.js';
+
+export class UploaderManager {
+    constructor() {
+        this.onUploadSuccess = null;
+    }
+
+    initialize() {
+        const uploadForm = document.getElementById('upload-form');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', this.handleUpload.bind(this));
+        }
+    }
+
+    async handleUpload(event) {
+        event.preventDefault();
+        const fileInput = document.getElementById('pdf-file-input');
+        const uploadStatus = document.getElementById('upload-status');
+        const uploadButton = document.querySelector('#upload-form button');
+        
+        if (!fileInput.files || fileInput.files.length === 0) {
+            showStatus(uploadStatus, 'Please select a PDF file first.', 'error');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        debugLog('Starting upload', { fileName: file.name, fileSize: file.size });
+        
+        showStatus(uploadStatus, `Uploading and processing: ${file.name}...`, 'loading');
+        uploadButton.disabled = true;
+
+        try {
+            const result = await uploadPDF(file);
+            showStatus(uploadStatus, 'File processed successfully! You can now ask questions.', 'success');
+            
+            if (this.onUploadSuccess) {
+                this.onUploadSuccess(result.document_id);
+            }
+        } catch (error) {
+            showStatus(uploadStatus, `Upload failed: ${error.message}`, 'error');
+        } finally {
+            uploadButton.disabled = false;
+            event.target.reset();
+        }
+    }
+
+    setUploadSuccessHandler(handler) {
+        this.onUploadSuccess = handler;
     }
 }
-
-async function handleUpload(elements, api, onUploadSuccess) {
-    if (!elements.pdfFileInput.files || elements.pdfFileInput.files.length === 0) {
-        elements.uploadStatus.textContent = 'Please select a PDF file first.';
-        elements.uploadStatus.className = 'status-message error';
-        return;
-    }
-
-    const file = elements.pdfFileInput.files[0];
-    
-    // Provide immediate, clear user feedback
-    elements.uploadStatus.textContent = `Uploading and processing: ${file.name}...`;
-    elements.uploadStatus.className = 'status-message loading';
-    elements.uploadButton.disabled = true;
-
-    try {
-        const result = await api.uploadPDF(file);
-        
-        elements.uploadStatus.textContent = 'File processed successfully! You can now ask questions.';
-        elements.uploadStatus.className = 'status-message success';
-        
-        // Callback to the main UI to update the application state
-        onUploadSuccess(elements, result.document_id);
-
-    } catch (error) {
-        console.error("Upload failed:", error);
-        elements.uploadStatus.textContent = `Upload failed: ${error.message}`;
-        elements.uploadStatus.className = 'status-message error';
-    } finally {
-        // Always re-enable the form for the next upload attempt
-        elements.uploadButton.disabled = false;
-        elements.uploadForm.reset(); 
-    }
-}
-
