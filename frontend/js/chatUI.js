@@ -6,14 +6,20 @@ const SUPABASE_URL = 'https://neuogxpouxhiahdiuovg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ldW9neHBvdXhoaWFoZGl1b3ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MTAyMDgsImV4cCI6MjA3Mjk4NjIwOH0.ptaLhJyEB63wDd99nHhJM2rK0mhJ2H88AosnyG8tV8I';
 // ---------------------------------------------------------
 
-// This is the main entry point. All code waits for the HTML to be fully loaded.
-document.addEventListener('DOMContentLoaded', () => {
-    // --- 1. Initialize Supabase Client ---
-    // We are now 100% certain the Supabase library from the CDN is loaded.
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// --- State and DOM Elements ---
+let supabaseClient;
+let currentDocumentId = null;
 
-    // --- 2. Get All DOM Elements ---
-    // We are now 100% certain all HTML elements exist. This prevents 'null' errors.
+// This is the main entry point for the entire frontend application.
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (error) {
+        console.error("Supabase initialization failed:", error);
+        document.body.innerHTML = "<h1>Error: Could not connect to authentication service.</h1>";
+        return;
+    }
+
     const elements = {
         authSection: document.getElementById('auth-section'),
         loginForm: document.getElementById('login-form'),
@@ -33,18 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadButton: document.querySelector('#upload-form button')
     };
 
-    // --- 3. Initialize Modules ---
-    // We pass the Supabase client and the found elements to the other modules.
     const api = initializeApi(() => supabaseClient.auth.getSession());
-    initializeUploader(elements, api, onUploadSuccess);
+    initializeUploader(elements, api, (docId) => onUploadSuccess(elements, docId));
     initializeAuth(elements, supabaseClient);
     initializeChat(elements, api);
 });
 
-// --- State Management ---
-let currentDocumentId = null;
-
-// --- Module Initializers ---
 
 function initializeAuth(elements, supabaseClient) {
     supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -64,12 +64,17 @@ function initializeAuth(elements, supabaseClient) {
             setAuthMessage(elements.authMessage, `Login failed: ${error.message}`, 'error');
         }
     });
-
+    
     elements.signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
         const email = prompt("Please enter your email to sign up:");
+        if (!email) return;
+        
         const password = prompt("Please enter a password (min. 6 characters):");
-        if (!email || !password) return;
+        if (!password) return;
+
+        setAuthMessage(elements.authMessage, '');
 
         try {
             const { error } = await supabaseClient.auth.signUp({ email, password });
@@ -80,39 +85,9 @@ function initializeAuth(elements, supabaseClient) {
         }
     });
 
-    elements.logoutButton.addEventListener('click', () => {
-        supabaseClient.auth.signOut();
+    elements.logoutButton.addEventListener('click', async () => {
+        await supabaseClient.auth.signOut();
     });
-}
-
-function initializeChat(elements, api) {
-    elements.chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const question = elements.chatInput.value.trim();
-        if (!question || !currentDocumentId) return;
-
-        appendMessage(elements, 'user', question);
-        elements.chatInput.value = '';
-        
-        const thinkingMessage = appendMessage(elements, 'bot', 'Thinking...');
-        try {
-            const response = await api.postChatMessage(currentDocumentId, question);
-            thinkingMessage.querySelector('p').textContent = response.answer;
-        } catch (error) {
-            thinkingMessage.querySelector('p').textContent = `Error: ${error.message}`;
-            thinkingMessage.classList.add('error-message');
-        }
-    });
-}
-
-// --- UI Update Functions ---
-
-function onUploadSuccess(elements, docId) {
-    currentDocumentId = docId;
-    elements.chatInput.disabled = false;
-    elements.chatSendButton.disabled = false;
-    elements.chatMessages.innerHTML = ''; // Clear previous messages
-    appendMessage(elements, 'bot', `PDF processed successfully. You can now ask questions.`);
 }
 
 function updateAuthState(elements, session) {
@@ -123,13 +98,55 @@ function updateAuthState(elements, session) {
     } else {
         elements.authSection.style.display = 'block';
         elements.mainSection.style.display = 'none';
-        currentDocumentId = null;
-        // Reset chat UI when logged out
-        elements.chatInput.disabled = true;
-        elements.chatSendButton.disabled = true;
-        elements.chatMessages.innerHTML = '';
-        appendMessage(elements, 'bot', 'Please upload a document to begin.');
+        elements.userIdentifier.textContent = '';
+        resetChat(elements);
     }
+}
+
+function initializeChat(elements, api) {
+    elements.chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const question = elements.chatInput.value.trim();
+        if (!question || !currentDocumentId) {
+            // Provide feedback if user tries to chat without a doc
+            if (!currentDocumentId) {
+                appendMessage(elements, 'bot', 'Error: Please upload and process a document before asking questions.');
+            }
+            return;
+        }
+
+        appendMessage(elements, 'user', question);
+        elements.chatInput.value = '';
+        
+        const thinkingMessage = appendMessage(elements, 'bot', 'Thinking...');
+        thinkingMessage.classList.add('thinking-message');
+
+        try {
+            const response = await api.postChatMessage(currentDocumentId, question);
+            thinkingMessage.querySelector('p').textContent = response.answer;
+            thinkingMessage.classList.remove('thinking-message');
+        } catch (error) {
+            // --- THE FIX: Display error.message instead of the whole object ---
+            thinkingMessage.querySelector('p').textContent = `Error: ${error.message}`;
+            thinkingMessage.classList.add('error-message');
+        }
+    });
+}
+
+function onUploadSuccess(elements, docId) {
+    currentDocumentId = docId;
+    elements.chatInput.disabled = false;
+    elements.chatSendButton.disabled = false;
+    elements.chatMessages.innerHTML = '';
+    appendMessage(elements, 'bot', `PDF processed successfully. You can now ask questions about your document.`);
+}
+
+function resetChat(elements) {
+    currentDocumentId = null;
+    elements.chatInput.disabled = true;
+    elements.chatSendButton.disabled = true;
+    elements.chatMessages.innerHTML = '';
+    appendMessage(elements, 'bot', 'Please upload a document to begin.');
 }
 
 function appendMessage(elements, sender, text) {
