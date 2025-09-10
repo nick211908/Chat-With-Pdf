@@ -42,7 +42,7 @@ class MongoVectorStore:
                     "metadata": doc.metadata
                 })
                 logger.info(f"Embedded and stored a chunk for doc_id: {document_id}")
-                # Keep this delay to prevent the 429 rate limit error.
+                # This delay is CRITICAL for staying within the free tier limits.
                 time.sleep(4)
             logger.success("All documents have been successfully embedded and stored.")
         except Exception as e:
@@ -54,11 +54,14 @@ class MongoVectorStore:
         Returns a simplified retriever for a specific user and document.
         """
         def simple_retriever(query: str):
+            # This is a basic retriever. For production, you'd implement a proper
+            # vector similarity search here.
             results = self.collection.find({
                 "metadata.user_id": user_id,
                 "metadata.document_id": document_id
             })
-            return [Document(page_content=r['text'], metadata=r['metadata']) for r in results]
+            # Limiting to 5 most recent chunks for context to avoid overwhelming the LLM
+            return [Document(page_content=r['text'], metadata=r['metadata']) for r in results][-5:]
         return simple_retriever
 
 vector_store = MongoVectorStore()

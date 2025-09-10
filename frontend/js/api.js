@@ -1,23 +1,16 @@
-import { supabase } from './chatUI.js';
-
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
-async function getAuthToken() {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-        console.error("Error getting auth session:", error);
-        return null;
-    }
-    return data.session?.access_token;
+// This is a "provider" function that chatUI will set.
+// It allows this module to get the token without depending on the Supabase client directly.
+let getAuthToken = async () => null;
+
+export function setAuthTokenProvider(provider) {
+    getAuthToken = provider;
 }
 
 export async function uploadPDF(file) {
     const token = await getAuthToken();
-    if (!token) {
-        console.error("ERROR: No auth token found. Cannot upload."); // Critical failure point.
-        throw new Error('You must be logged in to upload files.');
-    }
-    console.log("4. Attempting to send file to backend. Token found."); // Probe 4: Confirms we have a token and are proceeding.
+    if (!token) throw new Error('Authentication token not found. Please log in again.');
 
     const formData = new FormData();
     formData.append('file', file);
@@ -31,8 +24,8 @@ export async function uploadPDF(file) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Unknown server error' }));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ detail: 'The server returned an unreadable error.' }));
+        throw new Error(errorData.detail || `Server error: ${response.status}`);
     }
 
     return response.json();
@@ -40,9 +33,7 @@ export async function uploadPDF(file) {
 
 export async function postChatMessage(documentId, question) {
     const token = await getAuthToken();
-    if (!token) {
-        throw new Error('You must be logged in to chat.');
-    }
+    if (!token) throw new Error('Authentication token not found. Please log in again.');
 
     const response = await fetch(`${API_BASE_URL}/api/v1/chat`, {
         method: 'POST',
@@ -57,8 +48,8 @@ export async function postChatMessage(documentId, question) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Unknown server error' }));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ detail: 'The server returned an unreadable error.' }));
+        throw new Error(errorData.detail || `Server error: ${response.status}`);
     }
 
     return response.json();
