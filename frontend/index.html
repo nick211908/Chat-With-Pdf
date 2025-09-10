@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with PDF</title>
+    <link rel="stylesheet" href="styles/styles.css">
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Section -->
+        <section id="auth-section">
+            <div class="auth-container">
+                <!-- Login Form -->
+                <div class="auth-form">
+                    <h2>Login</h2>
+                    <form id="login-form">
+                        <!-- THE FIX IS HERE: Added name="email" and name="password" -->
+                        <input type="email" id="login-email" name="email" placeholder="Email" required>
+                        <input type="password" id="login-password" name="password" placeholder="Password" required>
+                        <button type="submit">Login</button>
+                    </form>
+                </div>
+                <!-- Signup Form -->
+                <div class="auth-form">
+                    <h2>Sign Up</h2>
+                    <form id="signup-form">
+                         <!-- THE FIX IS HERE: Added name="email" and name="password" -->
+                        <input type="email" id="signup-email" name="email" placeholder="Email" required>
+                        <input type="password" id="signup-password" name="password" placeholder="Password" required>
+                        <button type="submit">Sign Up</button>
+                    </form>
+                </div>
+            </div>
+            <p id="auth-message" class="message system"></p>
+        </section>
+
+        <!-- Main Application Section (hidden by default) -->
+        <section id="main-section" style="display: none;">
+            <header>
+                <h1>Chat with Your PDF</h1>
+                <div>
+                    <span id="user-identifier"></span>
+                    <button id="logout-button">Logout</button>
+                </div>
+            </header>
+
+            <!-- PDF Uploader -->
+            <div id="uploader-container" class="card">
+                <h2>1. Upload Your PDF</h2>
+                <form id="upload-form">
+                    <input type="file" id="pdf-file" accept=".pdf" required>
+                    <button type="submit">Upload and Process</button>
+                </form>
+                <div id="upload-status" class="message"></div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div id="chat-container" class="card">
+                <h2>2. Ask a Question</h2>
+                <div id="chat-window">
+                    <div class="message system">Please upload a document to begin.</div>
+                </div>
+                <form id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Ask a question about the document..." required>
+                    <button type="submit">Send</button>
+                </form>
+                 <p id="chat-status" class="message system"></p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Main JS Modules -->
+    <script type="module" src="js/chatUI.js"></script>
+</body>
+</html>
+
