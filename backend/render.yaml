@@ -1,0 +1,19 @@
+services:
+  - name: chat-backend
+    type: web
+    env: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    envVars:
+      - key: MONGO_CONNECTION_STRING
+        value: mongodb+srv://ayushpandey2119:ayushpandey21190803@cluster0.chsivwa.mongodb.net/
+      - key: GOOGLE_API_KEY
+        value: AIzaSyDIicDvZ6sHZowk88JZiOIy7rU84t6BArE
+      - key: SUPABASE_URL
+        value: https://neuogxpouxhiahdiuovg.supabase.co
+      - key: SUPABASE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ldW9neHBvdXhoaWFoZGl1b3ZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzQxMDIwOCwiZXhwIjoyMDcyOTg2MjA4fQ.vkNtgfatjJv9rahk44K5K-5L7GHiewK9YKQDXXZiXok
+      - key: SUPABASE_JWT_SECRET
+        value: dK7+gy9hR9JwQfndyL69DIwMgFtn5EIsYjGy0ANaGbxwSlKu5jWLFjzpPGojnrKP+qrgROaIW/aUprqXPL/rWw==
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ldW9neHBvdXhoaWFoZGl1b3ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MTAyMDgsImV4cCI6MjA3Mjk4NjIwOH0.ptaLhJyEB63wDd99nHhJM2rK0mhJ2H88AosnyG8tV8I
