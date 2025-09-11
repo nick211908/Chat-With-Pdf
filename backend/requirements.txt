@@ -10,6 +10,7 @@ langchain-community
 langchain-google-genai
 langchain-mongodb
 pymupdf
+pypdf
 pymongo
 supabase
 python-jose[cryptography]
