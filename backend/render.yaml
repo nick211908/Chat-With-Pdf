@@ -1,6 +1,0 @@
-services:
-  - name: chat-backend
-    type: web
-    env: docker
-    plan: free
-    dockerfilePath: Dockerfile
