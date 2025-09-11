@@ -17,3 +17,4 @@ pytest
 httpx
 numpy
 sentence-transformers
+langchain-huggingface
